@@ -6,13 +6,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAIModels } from "../../ai-agent/hook/ai-agent";
 import { ModelSelector } from "./model-selector";
 import { Spinner } from "@/components/ui/spinner";
+import { useCreateChat } from "../hooks/chat";
+import { toast } from "sonner";
 
 const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
   const { data: models, isPending, error } = useAIModels();
 
+  const [selectedModel, setSelectedModel] = useState(null);
   const [message, setMessage] = useState("");
 
-  const [selectedModel, setSelectedModel] = useState(models?.models[0].id);
+  const { mutateAsync, isPending: isChatPending } = useCreateChat();
+
+  // Initialiser le modèle sélectionné une fois les données chargées
+  useEffect(() => {
+    if (models?.models?.[0]?.id && !selectedModel) {
+      setSelectedModel(models.models[0].id);
+    }
+  }, [models, selectedModel]);
 
   useEffect(() => {
     if (initialMessage) {
@@ -24,9 +34,19 @@ const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
   const handleSubmit = async (e) => {
     try {
       e.preventDefault();
-      console.log("Message sent");
+
+      if (!selectedModel) {
+        toast.error("Please select a model");
+        return;
+      }
+
+      await mutateAsync({ content: message, model: selectedModel });
+      toast.success("Message sent successfully");
     } catch (error) {
       console.error(error);
+      toast.error("Failed to send message");
+    } finally {
+      setMessage("");
     }
   };
 
@@ -34,7 +54,7 @@ const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
     <div className="w-full max-w-3xl mx-auto px-4 pb-6">
       <form onSubmit={handleSubmit} className="relative">
         {/* Main Input Container */}
-        <div className="relative rounded-2xl border border-border shadow-sm   transition-all">
+        <div className="relative rounded-2xl border border-border shadow-sm transition-all">
           {/* Textarea */}
           <Textarea
             value={message}
@@ -54,32 +74,33 @@ const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
             {/* Left side tools */}
             <div className="flex items-center gap-1">
               {isPending ? (
-                <>
-                  <Spinner />
-                </>
+                <Spinner />
               ) : (
-                <>
-                  <h1>Models</h1>
-                  <ModelSelector
-                    models={models?.models}
-                    selectedModelId={selectedModel}
-                    onModelSelect={setSelectedModel}
-                    className="ml-1"
-                  />
-                </>
+                <ModelSelector
+                  models={models?.models}
+                  selectedModelId={selectedModel}
+                  onModelSelect={setSelectedModel}
+                  className="ml-1"
+                />
               )}
             </div>
 
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={!message.trim()}
+              disabled={!message.trim() || isChatPending || !selectedModel}
               size="sm"
               variant={message.trim() ? "default" : "ghost"}
               className="h-8 w-8 p-0 rounded-full"
             >
-              <Send className="h-4 w-4" />
-              <span className="sr-only">Send message</span>
+              {isChatPending ? (
+                <Spinner />
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  <span className="sr-only">Send message</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
