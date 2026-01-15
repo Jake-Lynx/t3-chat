@@ -3,9 +3,16 @@ import React, { useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useAIModels } from "../../ai-agent/hook/ai-agent";
+import { ModelSelector } from "./model-selector";
+import { Spinner } from "@/components/ui/spinner";
 
 const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
+  const { data: models, isPending, error } = useAIModels();
+
   const [message, setMessage] = useState("");
+
+  const [selectedModel, setSelectedModel] = useState(models?.models[0].id);
 
   useEffect(() => {
     if (initialMessage) {
@@ -46,7 +53,21 @@ const ChatMessageForm = ({ initialMessage, onMessageChange }) => {
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-t">
             {/* Left side tools */}
             <div className="flex items-center gap-1">
-              <Button variant={"outline"}>Select a Model</Button>
+              {isPending ? (
+                <>
+                  <Spinner />
+                </>
+              ) : (
+                <>
+                  <h1>Models</h1>
+                  <ModelSelector
+                    models={models?.models}
+                    selectedModelId={selectedModel}
+                    onModelSelect={setSelectedModel}
+                    className="ml-1"
+                  />
+                </>
+              )}
             </div>
 
             {/* Submit Button */}
