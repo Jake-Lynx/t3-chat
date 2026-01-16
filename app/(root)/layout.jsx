@@ -5,6 +5,7 @@ import React from "react";
 import ChatSidebar from "../modules/chat/components/chat-sidebar";
 import { currentUser } from "../modules/authentication/actions";
 import Header from "../modules/chat/components/header";
+import { getAllChats } from "../modules/chat/actions";
 
 const Layout = async ({ children }) => {
   const session = await auth.api.getSession({
@@ -13,6 +14,8 @@ const Layout = async ({ children }) => {
 
   const user = await currentUser();
 
+  const { data: chats } = await getAllChats();
+
   if (!session) {
     return redirect("/sign-in");
   }
@@ -20,7 +23,7 @@ const Layout = async ({ children }) => {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* ChatSidebar */}
-      <ChatSidebar user={user} />
+      <ChatSidebar user={user} chats={chats} />
       <main className="flex-1 overflow-hidden">
         {/* header */}
         <Header />
