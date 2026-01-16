@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "../../authentication/actions";
 import { MessageRole, MessageType } from "@/lib/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
+import { DbNull } from "@prisma/client/runtime/client";
 
 export const createChatWithMessage = async (values) => {
   try {
@@ -58,6 +59,88 @@ export const createChatWithMessage = async (values) => {
     return {
       success: false,
       message: "Failed to create chat",
+    };
+  }
+};
+
+export const getAllChats = async () => {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      return {
+        success: false,
+        message: "Unauthorized user",
+      };
+    }
+
+    const chats = await prisma.chat.findMany({
+      where: {
+        userId: user.id,
+      },
+      include: {
+        messages: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      message: "Chats fetched successfully",
+      data: chats,
+    };
+  } catch (error) {
+    console.error("Error fetching chats:", error);
+    return {
+      success: false,
+      message: "Failed to fetch chats",
+    };
+  }
+};
+
+export const deleteChat = async (chatId) => {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      return {
+        success: false,
+        message: "Unauthorized user",
+      };
+    }
+
+    const chat = await prisma.chat.findUnique({
+      where: {
+        id: chatId,
+        userId: user.id,
+      },
+    });
+
+    if (!chat) {
+      return {
+        success: false,
+        message: "Chat not found",
+      };
+    }
+
+    await prisma.chat.delete({
+      where: {
+        id: chatId,
+      },
+    });
+
+    revalidatePath("/");
+    return {
+      success: true,
+      message: "Chat deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    return {
+      success: false,
+      message: "Failed to delete chat",
     };
   }
 };
